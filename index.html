@@ -1,0 +1,79 @@
+<!doctype html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="robots" content="noindex,nofollow">
+<title>فريق الطوارئ</title>
+<style>
+:root{--navy:#0d3558;--navy2:#124476;--red:#dc2430;--bg:#eef4fa;--card:#fff;--tx:#10243a;--mut:#5b6f85;--bd:#d5e0ec}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--tx);font-family:"Readex Pro","IBM Plex Sans Arabic","Segoe UI",Tahoma,Arial,sans-serif;line-height:1.6;min-height:100vh}
+.wrap{max-width:720px;margin:0 auto;padding:0 16px 40px}
+header{background:linear-gradient(135deg,var(--navy),var(--navy2));color:#fff;padding:26px 16px 22px;border-bottom:5px solid var(--red)}
+header .in{max-width:720px;margin:0 auto}
+header h1{margin:0;font-size:26px}
+header p{margin:4px 0 0;opacity:.85;font-size:14px}
+.gate{max-width:380px;margin:40px auto 0;background:var(--card);border:1px solid var(--bd);border-radius:16px;padding:22px;text-align:center}
+.gate h2{margin:0 0 6px;font-size:18px}
+.gate p{margin:0 0 14px;color:var(--mut);font-size:14px}
+input{width:100%;padding:13px;border:1px solid var(--bd);border-radius:10px;font-size:16px;direction:ltr;text-align:center;font-family:inherit}
+button.pri{width:100%;margin-top:12px;padding:13px;border:0;border-radius:10px;background:var(--navy);color:#fff;font-size:16px;font-family:inherit;cursor:pointer}
+button.pri:disabled{opacity:.6}
+.err{color:var(--red);font-size:14px;margin-top:10px;min-height:20px}
+.grid{display:grid;gap:12px;margin-top:20px}
+.emp{display:flex;align-items:center;gap:14px;background:var(--card);border:1px solid var(--bd);border-right:5px solid var(--red);border-radius:14px;padding:16px;cursor:pointer;font-size:18px;font-weight:600;font-family:inherit;color:var(--tx);width:100%;text-align:start}
+.emp small{display:block;font-weight:400;font-size:13px;color:var(--mut)}
+.av{flex:none;width:46px;height:46px;border-radius:50%;background:var(--navy);color:#fff;display:flex;align-items:center;justify-content:center;font-size:20px}
+.back{background:none;border:0;color:var(--navy2);font-size:15px;margin-top:16px;cursor:pointer;font-family:inherit;padding:6px 0}
+.day{margin-top:18px}
+.day h3{margin:0 0 8px;font-size:15px;color:var(--navy2)}
+.day img{width:100%;height:auto;border-radius:12px;border:1px solid var(--bd);background:#fff;display:block;cursor:zoom-in}
+#lb{position:fixed;inset:0;background:rgba(0,0,0,.92);display:none;overflow:auto;z-index:9;padding:50px 8px 20px}
+#lb img{width:100%;max-width:1000px;display:block;margin:0 auto}
+#lb button{position:fixed;top:10px;left:10px;background:#fff;border:0;border-radius:8px;padding:8px 14px;font-size:16px;font-family:inherit}
+footer{text-align:center;color:var(--mut);font-size:12px;margin-top:30px}
+[hidden]{display:none!important}
+</style>
+</head>
+<body>
+<header><div class="in"><h1>فريق الطوارئ</h1><p>التقارير اليومية للعمل</p></div></header>
+<div class="wrap">
+<section id="gate" class="gate">
+<h2>أدخل كلمة المرور</h2><p>هذا الموقع خاص بفريق العمل</p>
+<form id="f"><input id="pw" type="password" autocomplete="current-password" placeholder="••••••••" autofocus>
+<button class="pri" id="go" type="submit">دخول</button></form>
+<div class="err" id="err"></div>
+</section>
+<section id="list" hidden><div class="grid" id="grid"></div></section>
+<section id="emp" hidden><button class="back" id="b1">← رجوع للفريق</button><h2 id="en" style="margin:6px 0 0"></h2><div id="days"></div></section>
+<footer>موقع داخلي لفريق الطوارئ — غير رسمي</footer>
+</div>
+<div id="lb"><button id="lbx">إغلاق ✕</button><img id="lbi" alt=""></div>
+<script>
+const $=id=>document.getElementById(id);
+let D=null;
+const AR=n=>String(n).replace(/\d/g,d=>"٠١٢٣٤٥٦٧٨٩"[d]);
+function fmt(d){const [y,m,dd]=d.split('-');const M=["يناير","فبراير","مارس","أبريل","مايو","يونيو","يوليو","أغسطس","سبتمبر","أكتوبر","نوفمبر","ديسمبر"];return AR(+dd)+" "+M[+m-1]+" "+AR(y)}
+async function dec(pw,buf){
+ const b=new Uint8Array(buf),salt=b.slice(0,16),iv=b.slice(16,28),ct=b.slice(28);
+ const km=await crypto.subtle.importKey('raw',new TextEncoder().encode(pw),'PBKDF2',false,['deriveKey']);
+ const key=await crypto.subtle.deriveKey({name:'PBKDF2',salt,iterations:600000,hash:'SHA-256'},km,{name:'AES-GCM',length:256},false,['decrypt']);
+ return JSON.parse(new TextDecoder().decode(await crypto.subtle.decrypt({name:'AES-GCM',iv},key,ct)));
+}
+$('f').onsubmit=async e=>{e.preventDefault();const go=$('go');go.disabled=true;go.textContent='جاري الفتح…';$('err').textContent='';
+ try{const r=await fetch('data.enc?'+Date.now());const buf=await r.arrayBuffer();D=await dec($('pw').value,buf);show();}
+ catch(x){$('err').textContent='كلمة المرور غير صحيحة';}
+ go.disabled=false;go.textContent='دخول';};
+function show(){$('gate').hidden=true;$('emp').hidden=true;$('list').hidden=false;const g=$('grid');g.innerHTML='';
+ D.employees.forEach(e=>{const n=D.reports.filter(r=>r.emp===e.id).length;const b=document.createElement('button');b.className='emp';
+  b.innerHTML='<span class="av">'+e.name.trim()[0]+'</span><span>'+e.name+'<small>'+AR(n)+' تقرير</small></span>';b.onclick=()=>open_(e);g.appendChild(b);});}
+function open_(e){$('list').hidden=true;$('emp').hidden=false;$('en').textContent=e.name;const c=$('days');c.innerHTML='';
+ const rs=D.reports.filter(r=>r.emp===e.id).sort((a,b)=>b.date.localeCompare(a.date));
+ if(!rs.length)c.innerHTML='<p style="color:var(--mut)">لا توجد تقارير بعد</p>';
+ rs.forEach(r=>{const d=document.createElement('div');d.className='day';d.innerHTML='<h3>'+fmt(r.date)+'</h3>';const i=new Image();i.src=r.img;i.alt=e.name+' '+r.date;i.onclick=()=>{$('lbi').src=r.img;$('lb').style.display='block'};d.appendChild(i);c.appendChild(d);});
+ scrollTo(0,0);}
+$('b1').onclick=show;$('lbx').onclick=()=>$('lb').style.display='none';
+</script>
+</body>
+</html>
